@@ -1,0 +1,6 @@
+# Okul Bilgisayarı Yol Haritası
+train: D:/OtonomProje/Mixed_Dataset_Final/train/images
+val: D:/OtonomProje/Hybrid_Val_Set/images
+
+nc: 7
+names: ['animal', 'obstacle', 'person', 'pothole', 'signal', 'speedbump', 'vehicle']
