@@ -48,7 +48,7 @@ Bu projede:
 ```
 [ Sisli CARLA Kamerası ] ---> [ DehazeFormer-S ] ---> [ YOLOv11 Tespiti ]
                                                             │
-                                  [ LiDAR Nokta Bulutu ] ───┴──> [ 3B Füzyon & Mesafe ] 
+                                  [ LiDAR Nokta Bulutu ] ───┴──> [ 3B Füzyon & Mesafe ]
                                                                           │
                                                                           ▼
 [ Araç Aktüatörleri: Gaz / Fren / Direksiyon ] <─── [ TTC & PID Kontrolcü ]
@@ -94,7 +94,7 @@ graph TD
 
 ### 2. Nesne Tespiti (YOLOv11)
 * **Model:** Ultralytics YOLOv11 (YOLOv11x / YOLOv11m ağırlıklarıyla transfer learning).
-* **Eğitilen Sınıflar:** `Car`, `Pedestrian`, `Bicycle`, `Truck`, `Traffic Light`, `Obstacle`.
+* **Eğitilen Sınıflar (7 Sınıf):** `Vehicle` (Araç), `Person` (Yaya), `Signal` (Trafik Işığı), `Speedbump` (Hız Tümseği), `Pothole` (Çukur), `Obstacle` (Yol Engeli), `Animal` (Hayvan).
 * **Farkı:** Sisli ham görüntü yerine DehazeFormer çıkışından beslendiğinde tespitteki yanlış negatif (kaçırılan araç/yaya) oranı dramatik şekilde düşmektedir.
 
 ### 3. LiDAR-Kamera Sensör Füzyonu & Mesafe Analizi
@@ -111,6 +111,7 @@ $$\text{TTC} = \frac{d}{v_{\text{rel}}}$$
 
 * **TTC $\le 2.0$ sn:** Acil frenleme devresi (Full Brake = 1.0).
 * **TTC > 2.0 sn:** Dinamik hedef hız takip PID döngüsü ve yanal sapmayı düzelten direksiyon PID kontrolcüsü çalışır.
+* **Risk Skoru & Karar Hiyerarşisi:** LiDAR, TTC, YOLO yaya/araç tespiti ve trafik ışığı durumları ağırlıklandırılarak `emergency > tl_stop > hard_brake > soft_brake > slow > caution > go` öncelik ağacı işletilir.
 
 ---
 
@@ -163,6 +164,9 @@ adverse-weather-autonomous-driving/
 ├── DehazeFormer/                  # Vision Transformer tabanlı sis giderme modeli mimarisi
 │   ├── configs/                   # Model konfigürasyonları (indoor, outdoor, reside6k)
 │   ├── models/                    # DehazeFormer PyTorch katmanları
+│   ├── weights/                   # Eğitilmiş DehazeFormer-S model ağırlığı (dehazeformer-s.pth)
+│   ├── main.py                    # Bütünleşik otonom sürüş ve HUD motoru (Asıl Ana Kod)
+│   ├── test_dehazeformer.py       # Tekil görsel sis giderme test betiği
 │   ├── datasets/                  # Veri seti yükleyicileri
 │   └── test.py                    # Görüntü sis giderme test betiği
 ├── Otonom_YOLOv11_Mixed_Robust/   # Eğitilmiş YOLOv11 model metrikleri ve eğitim çıktıları
@@ -178,7 +182,6 @@ adverse-weather-autonomous-driving/
 │   └── performans_sis_sonrasi.jpg # Sis sonrası metrik grafiği
 ├── best.pt                        # Eğitilmiş en iyi YOLOv11 ağırlık dosyası
 ├── data_collector.py              # CARLA simülatöründen senkron kamera & LiDAR veri toplama betiği
-├── kontrol.py                     # PID boylamsal/yanal kontrolcü ve TTC fren hesaplama modülü
 ├── proje_calistir.py              # Tüm sistemi entegre başlatan ana çalıştırma betiği
 ├── temel_yapi.py                  # CARLA dünya başlatma, araç ve sensör bağlama altyapısı
 ├── train_yolo.py                  # YOLOv11 özel veri seti üzerinde eğitim betiği
@@ -226,10 +229,16 @@ CarlaUE4.exe -quality-level=Epic -world-port=2000
 
 ### 4. Otonom Sürüş Sistemini Koşturma
 ```bash
+# Entegre sürüş sistemini başlatmak için:
 python proje_calistir.py
+
+# Veya doğrudan DehazeFormer modülünden çalıştırmak için:
+cd DehazeFormer
+python main.py
 ```
 
 *Sistem otomatik olarak CARLA'ya bağlanacak, araca hava koşulu olarak yoğun sis uygulayacak, DehazeFormer ve YOLOv11 modellerini GPU'ya yükleyerek ekranda canlı HUD paneliyle otonom sürüşü başlatacaktır.*
+*(Not: Model ağırlıklarının `best.pt` ana dizinde, `dehazeformer-s.pth` dosyasının ise `DehazeFormer/weights/` klasöründe yer aldığından emin olun.)*
 
 ---
 
